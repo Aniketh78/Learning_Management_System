@@ -8,11 +8,17 @@ import com.example.lms_java.repository.StudentEnrollmentRepository;
 import com.example.lms_java.repository.SubmissionRepository;
 import com.example.lms_java.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.annotations.Cache;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static org.springframework.security.authorization.AuthorityReactiveAuthorizationManager.hasRole;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +29,7 @@ public class SubmissionService {
     private final StudentEnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
 
+    @CacheEvict(value = "assignmentSubmissions", key = "#request.assignmentId")
     public void submit(SubmitAssignmentRequest request) {
 
         String email = SecurityContextHolder.getContext()
@@ -54,22 +61,12 @@ public class SubmissionService {
 
         submissionRepository.save(submission);
     }
+    @Cacheable(value = "assignmentSubmissions", key = "#assignmentId")
+    @PreAuthorize("hasRole('TEACHER') && @assignmentSecurity.isOwner(#assignmentId, authentication.name)")
     public List<SubmissionResponse> getSubmissionsForAssignment(Long assignmentId) {
-
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication().getName();
-
-        User teacher = userRepository.findByEmail(email).orElseThrow();
-
-        if (teacher.getRole() != Role.TEACHER)
-            throw new RuntimeException("Only teachers can view submissions");
 
         Assignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new RuntimeException("Assignment not found"));
-
-        // ensure this teacher owns the assignment
-        if (!assignment.getTeacher().getId().equals(teacher.getId()))
-            throw new RuntimeException("You do not own this assignment");
 
         return submissionRepository.findByAssignment(assignment)
                 .stream()
