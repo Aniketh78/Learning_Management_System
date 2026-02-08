@@ -9,6 +9,7 @@ import com.example.lms_java.repository.SubjectRepository;
 import com.example.lms_java.repository.TeacherSubjectRepository;
 import com.example.lms_java.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,7 +18,7 @@ public class TeacherSubjectService {
     private final TeacherSubjectRepository teacherSubjectRepository;
     private final UserRepository userRepository;
     private final SubjectRepository subjectRepository;
-
+    @CacheEvict(value="enrollmentOptions", allEntries = true)
     public void assignTeacher(AssignTeacherRequest request){
         User teacher = userRepository.findById(request.getTeacherId())
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));

@@ -2,6 +2,7 @@ package com.example.lms_java.security;
 import com.example.lms_java.entity.User;
 import com.example.lms_java.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,7 @@ import java.util.List;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
-
+    @Cacheable(value="users", key="#email")
     @Override
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {

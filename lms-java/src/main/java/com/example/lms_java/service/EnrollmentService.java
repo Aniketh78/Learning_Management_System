@@ -7,12 +7,15 @@ import com.example.lms_java.dto.MySubjectResponse;
 import com.example.lms_java.entity.*;
 import com.example.lms_java.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.expression.spel.ast.Assign;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.stream.Collectors.toList;
 
@@ -25,29 +28,28 @@ public class EnrollmentService {
     private final StudentEnrollmentRepository studentEnrollmentRepository;
     private final AssignmentRepository assignmentRepository;
 
+    @Cacheable(value = "enrollmentOptions")
     public List<EnrollmentOptionResponse> getOptions(){
         List<Subject> subjects = subjectRepository.findAll();
-        List<EnrollmentOptionResponse> result = new ArrayList<>();
 
-        for(Subject subject: subjects){
-            List<TeacherSubject> mapping =
-                    teacherSubjectRepository.findBySubjectId(subject.getId());
+        List<Object[]> mappings = teacherSubjectRepository.findAllTeacherSubjectMappings();
+        Map<Long, List<EnrollmentOptionResponse.TeacherOption>> subjectTeachersMap = new HashMap<>();
 
-            List<EnrollmentOptionResponse.TeacherOption> teachers = new ArrayList<>();
+        for(Object[] row: mappings){
+            Long subjectId = (long) row[0];
+            Long teacherId = (long) row[1];
+            String teacherName = (String) row[2];
 
-            for(TeacherSubject teacherSubject: mapping){
-                User teacher = userRepository.findById(teacherSubject.getTeacherId()).get();
-                teachers.add(
-                        new EnrollmentOptionResponse.TeacherOption(
-                                teacher.getId(), teacher.getName()
-                        )
-                );
-            }
-
-            result.add(new EnrollmentOptionResponse(subject.getId(), subject.getName(), teachers));
+            subjectTeachersMap.putIfAbsent(subjectId, new ArrayList<>());
+            subjectTeachersMap.get(subjectId).add(new EnrollmentOptionResponse.TeacherOption(teacherId, teacherName));
 
         }
-        return result;
+        return subjects.stream()
+                .map(subject -> new EnrollmentOptionResponse(
+                        subject.getId(),
+                        subject.getName(),
+                        subjectTeachersMap.getOrDefault(subject.getId(), new ArrayList<>())
+                )).toList();
     }
 
     public void enroll(List<EnrollRequest> requests){
@@ -94,7 +96,7 @@ public class EnrollmentService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
 
-        List<StudentEnrollment> studentEnrollments = studentEnrollmentRepository.findByStudent(student);
+        List<StudentEnrollment> studentEnrollments = studentEnrollmentRepository.findByStudentWithDetails(student);
 
         return studentEnrollments.stream()
                 .map(e-> new MySubjectResponse(
