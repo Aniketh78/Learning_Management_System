@@ -1,6 +1,6 @@
-# Learning Management System (LMS)
+# Learning Management System (LMS) Platform
 
-This is a comprehensive Learning Management System built with a Spring Boot Java backend and a React Vite frontend. The application features role-based access control, allowing administrators, teachers, and students to interact with the platform according to their permissions.
+This repository contains a comprehensive Learning Management System built with a Spring Boot Java backend and a React Vite frontend. The application provides dynamic role-based access control, allowing administrators, teachers, and students to securely interact with the platform according to their granted permissions.
 
 ## Table of Contents
 - [Project Overview](#project-overview)
